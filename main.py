@@ -8,11 +8,12 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.window import Window
 from random import random
 
+
 # Класс интерактивной картинки
 class InteractiveImage(Widget):
     def __init__(self, image_path, rows, cols, **kwargs):
         super(InteractiveImage, self).__init__(**kwargs)
-        # Количество строк и столбоцов, путь к картинке
+        # Количество строк и столбцов, путь к картинке
         self.rows = rows
         self.cols = cols
         self.image_path = image_path
@@ -69,13 +70,10 @@ class MainMenu(BoxLayout):
         self.padding=200
         self.spacing=20
         # Это типа создание кнопок
-        self.play_button = Button(text='Играть', width=400,
-                                  pos_hint={'center_x': 0.5}, )
-        self.exit_button = Button(text='Выход', width=400,
-                                  pos_hint={'center_x': 0.5})
+        self.play_button = Button(text='Играть', width=400)
+        self.exit_button = Button(text='Выход', width=400)
         # Здесь мы привязываем нажатия кнопок к функциям
-        self.settings_button = Button(text='Настройки', width=400,
-                                    pos_hint={'center_x': 0.5})
+        self.settings_button = Button(text='Настройки', width=400)
         self.play_button.bind(on_press=self.start_game)
         self.settings_button.bind(on_press=self.open_settings)
         self.exit_button.bind(on_press=self.exit_game)
@@ -121,6 +119,8 @@ class MainMenu(BoxLayout):
             # Очищаем экран от всего
             self.clear_widgets()
             # И открываем нашу интерактивную картинку, передаём имя файла, столбцы и строки
+            self.padding=0
+            self.spacing=0
             self.add_widget(InteractiveImage(file_name, rows, cols))
         else:
             print("Ошибка: Количество строк и столбцов должно быть больше нуля.")
