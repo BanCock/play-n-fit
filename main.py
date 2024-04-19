@@ -66,11 +66,16 @@ class MainMenu(BoxLayout):
     def __init__(self, **kwargs):
         super(MainMenu, self).__init__(**kwargs)
         self.orientation = 'vertical'
+        self.padding=200
+        self.spacing=20
         # Это типа создание кнопок
-        self.play_button = Button(text='Играть')
-        self.settings_button = Button(text='Настройки')
-        self.exit_button = Button(text='Выход')
+        self.play_button = Button(text='Играть', width=400,
+                                  pos_hint={'center_x': 0.5}, )
+        self.exit_button = Button(text='Выход', width=400,
+                                  pos_hint={'center_x': 0.5})
         # Здесь мы привязываем нажатия кнопок к функциям
+        self.settings_button = Button(text='Настройки', width=400,
+                                    pos_hint={'center_x': 0.5})
         self.play_button.bind(on_press=self.start_game)
         self.settings_button.bind(on_press=self.open_settings)
         self.exit_button.bind(on_press=self.exit_game)
