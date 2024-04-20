@@ -8,7 +8,7 @@ from kivy.graphics import Color, Rectangle
 from kivy.core.window import Window
 from random import random
 
-
+# фафаыфафыафыафы
 # Класс интерактивной картинки
 class InteractiveImage(Widget):
     def __init__(self, image_path, rows, cols, **kwargs):
@@ -37,7 +37,7 @@ class InteractiveImage(Widget):
         with self.canvas:
             for row in range(self.rows):
                 for col in range(self.cols):
-                    Color(random(), random(), random(), 1)  # Прозрачный цвет для секций
+                    Color(1, 1, 1, 0.8)  # Прозрачный цвет для секций
                     rect = Rectangle(pos=((self.width / self.cols) * col, (self.height / self.rows) * row),
                                      size=(self.width / self.cols, self.height / self.rows))
                     self.rectangles.append(rect)
@@ -62,6 +62,7 @@ class InteractiveImage(Widget):
             except:
                 print("already clear")
 
+
 # Главное меню игры
 class MainMenu(BoxLayout):
     def __init__(self, **kwargs):
@@ -69,6 +70,8 @@ class MainMenu(BoxLayout):
         self.orientation = 'vertical'
         self.padding=200
         self.spacing=20
+
+        self.bg = Widget()
         # Это типа создание кнопок
         self.play_button = Button(text='Играть', width=400)
         self.exit_button = Button(text='Выход', width=400)
