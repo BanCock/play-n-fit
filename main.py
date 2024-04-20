@@ -160,6 +160,7 @@ class MainMenu(BoxLayout):
                                   cursor_size=(50, 40),  # Размер курсора ползунка
                                   cursor_image="cursor.png",  # Курсор есть картинка, здесь передаётся какая именно
                                   step=1)  # Шаг от 1 до 10 только по целым числам
+        self.slider_rows.bind(value=self.update_value_row)
         # "Кнопка", в которую передаётся значение количества столбцов
         self.cols_input = Button(text='Количество столбцов: 5',
                                  background_color=(0, 1 / 4, 1, 1),
