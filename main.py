@@ -6,7 +6,16 @@ from kivy.uix.slider import Slider
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
 from kivy.core.window import Window
+from kivy.core.audio import SoundLoader
 from random import random
+
+# Глобальная переменная для включения/выключения звуков
+# (пока что только для звуков кнопок, может быть потом реализуем звуки нажатия на прямоугольники в картинке)
+sound_check = 1
+# Глобальная переменная для громкости музыки
+volume = 50
+# В track передаётся саундтрек. Сделал его глобальным, чтобы музыка играла в любой части меню
+track = SoundLoader.load('soundtrack.mp3')
 
 
 # Класс интерактивной картинки
@@ -51,7 +60,7 @@ class InteractiveImage(Widget):
             col_width = self.width / self.cols
             row_height = self.height / self.rows
             # номер удаляемого прямоугольника вычисляется как координаты нажатия
-            # по х делить на ширину и по у делить на высоту
+            # по х делить на ширину и по y делить на высоту
             col = int(touch.x // col_width)
             row = int(touch.y // row_height)
             index = row * self.cols + col
@@ -64,10 +73,21 @@ class InteractiveImage(Widget):
 
 # Главное меню игры
 class MainMenu(BoxLayout):
+    track.volume = 0.5  # Изначальная громкость
+    track.loop = True   # Когда музыка закончится, она начнёт играть заново
+    track.play()        # Запуск музыки
+
     def __init__(self, **kwargs):
         super(MainMenu, self).__init__(**kwargs)
         # Вызов функции главного меню. Туда передаётся 0 по приколу, так как прога требует аргумент
         self.open_menu(0)
+
+    # Функция для звука нажатия на кнопку
+    def btn_pressed(self, instance):
+        global sound_check
+        if sound_check == 1:
+            sound = SoundLoader.load('click_sound.mp3')
+            sound.play()
 
     # Функция главного меню
     def open_menu(self, instance):
@@ -98,22 +118,24 @@ class MainMenu(BoxLayout):
                                   font_name="397-font.otf",  # Шрифт
                                   font_size="36sp",  # Размер шрифта
                                   background_normal='',  # Эти два параметра нужны для того, чтобы фон
-                                  background_down='')    # не влиял на цвет кнопки
+                                  background_down='',  # не влиял на цвет кнопки
+                                  on_press=self.btn_pressed)  # Вызов функции звука нажатия на кнопку
         self.settings_button = Button(text='Настройки',
                                       background_color=(0, 220 / 255, 20 / 255, 1),
                                       color=(1, 1, 1, 1),
                                       font_name="397-font.otf",
                                       font_size="36sp",
                                       background_normal='',
-                                      background_down='')
+                                      background_down='',
+                                      on_press=self.btn_pressed)
         self.exit_button = Button(text='Выход',
                                   background_color=(1, 40 / 255, 50 / 255, 1),
                                   color=(1, 1, 1, 1),
                                   font_name="397-font.otf",
                                   font_size="36sp",
                                   background_normal='',
-                                  background_down='')
-
+                                  background_down='',
+                                  on_press=self.btn_pressed)
         # Пустая кнопка, чтобы сделать отступ для text_info
         self.empty_button = Button(background_color=(0, 0, 0, 0))
 
@@ -186,7 +208,8 @@ class MainMenu(BoxLayout):
                               font_name="397-font.otf",
                               font_size="36sp",
                               background_normal='',
-                              background_down='')
+                              background_down='',
+                              on_press=self.btn_pressed)
         # Кнопка "Назад"
         exit_button = Button(text='Назад',
                              background_color=(1, 1 / 2, 0, 1),
@@ -194,7 +217,8 @@ class MainMenu(BoxLayout):
                              font_name="397-font.otf",
                              font_size="36sp",
                              background_normal='',
-                             background_down='')
+                             background_down='',
+                             on_press=self.btn_pressed)
 
         # Здесь мы привязываем нажатия кнопок к функциям
         start_button.bind(on_press=self.launch_game)
@@ -233,9 +257,90 @@ class MainMenu(BoxLayout):
         # И открываем нашу интерактивную картинку, передаём имя файла, столбцы и строки
         self.add_widget(InteractiveImage(file_name, rows, cols))
 
-    # Функция для отображения настроек (пока не написана + как будто и нечего туда добавлять)
+    # Функция для отображения настроек
     def open_settings(self, instance):
-        print("Открыть настройки")
+        global sound_check
+        # Очищаем окно от предыдущих кнопок и тд
+        self.clear_widgets()
+
+        # Установка новых параметров, чтобы были красивые кнопки
+        self.size = (500, 500)
+        self.pos = (710, 315)
+
+        # Кнопка включения/выключения звуков
+        self.sound_button = Button(text='Звуки: вкл',
+                                   background_color=(0, 220 / 255, 20 / 255, 1),
+                                   color=(1, 1, 1, 1),
+                                   font_name="397-font.otf",
+                                   font_size="22sp",
+                                   background_normal='',
+                                   background_down='',
+                                   on_press=self.btn_pressed,
+                                   on_release=self.change_sound_button)
+
+        # Условная конструкция нужна для того, чтобы запомнить состояние кнопки после выхода из меню "Настройки"
+        if sound_check == 1:
+            self.sound_button.text = 'Звуки: вкл'
+            self.sound_button.background_color = (0, 220 / 255, 20 / 255, 1)
+        else:
+            self.sound_button.text = 'Звуки: выкл'
+            self.sound_button.background_color = (1, 20 / 255, 20 / 255, 1)
+
+        # "Кнопка", в которую передаётся значение количества строк
+        self.music_button = Button(text=f'Громкость музыки: {volume}%',
+                                   background_color=(0, 1 / 4, 1, 1),
+                                   color=(1, 1, 1, 1),
+                                   font_name="397-font.otf",
+                                   font_size="22sp",
+                                   background_normal='',
+                                   background_down='')
+        # Ползунок для строк
+        self.slider_volume = Slider(min=0, max=100, value=volume,  # Минимальное, максимальное и текущее значения
+                                    background_width="30sp",  # Ширина полоски
+                                    value_track=True,  # Нужно для отслеживания ползунка
+                                    value_track_color=[1, 1 / 2, 0, 1],  # Цвет закрашенной полоски
+                                    cursor_size=(50, 40),  # Размер курсора ползунка
+                                    cursor_image="cursor.png",  # Курсор есть картинка, здесь передаётся какая именно
+                                    step=1)  # Шаг от 1 до 100 только по целым числам
+        # Кнопка "Назад"
+        exit_button = Button(text='Назад',
+                             background_color=(1, 1 / 2, 0, 1),
+                             color=(1, 1, 1, 1),
+                             font_name="397-font.otf",
+                             font_size="36sp",
+                             background_normal='',
+                             background_down='',
+                             on_press=self.btn_pressed)
+
+        # Здесь мы привязываем нажатия кнопок/ползунков к функциям
+        self.slider_volume.bind(value=self.update_value_volume)
+        exit_button.bind(on_press=self.open_menu)
+
+        # Здесь добавляется всё, что было описано выше
+        self.add_widget(self.sound_button)
+        self.add_widget(self.music_button)
+        self.add_widget(self.slider_volume)
+        self.add_widget(exit_button)
+
+    # Функция для изменения значения громкости
+    def update_value_volume(self, instance, value):
+        global volume
+        label = instance.parent.children[2]  # Получаем Label
+        volume = int(value)
+        track.volume = volume / 100
+        label.text = f'Громкость музыки: {volume}%'
+
+    # Функция для изменения кнопки "Включить/Выключить звук"
+    def change_sound_button(self, instance):
+        global sound_check
+        if sound_check == 1:
+            instance.text = 'Звуки: выкл'
+            instance.background_color = (1, 20 / 255, 20 / 255, 1)
+            sound_check = 0
+        else:
+            instance.text = 'Звуки: вкл'
+            instance.background_color = (0, 220 / 255, 20 / 255, 1)
+            sound_check = 1
 
     # Функция выхода из игры
     def exit_game(self, instance):
