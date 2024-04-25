@@ -1,19 +1,19 @@
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.textinput import TextInput
 from kivy.uix.slider import Slider
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
 from kivy.core.window import Window
 from kivy.core.audio import SoundLoader
+from kivy.uix.filechooser import FileChooserIconView
 from random import random
 
 # Глобальная переменная для включения/выключения звуков
 # (пока что только для звуков кнопок, может быть потом реализуем звуки нажатия на прямоугольники в картинке)
-sound_check = 1
+sound_check = 0
 # Глобальная переменная для громкости музыки
-volume = 50
+volume = 0
 # В track передаётся саундтрек. Сделал его глобальным, чтобы музыка играла в любой части меню
 track = SoundLoader.load('soundtrack.mp3')
 
@@ -73,9 +73,9 @@ class InteractiveImage(Widget):
 
 # Главное меню игры
 class MainMenu(BoxLayout):
-    track.volume = 0.5  # Изначальная громкость
-    track.loop = True   # Когда музыка закончится, она начнёт играть заново
-    track.play()        # Запуск музыки
+    track.volume = volume / 100  # Изначальная громкость
+    track.loop = True  # Когда музыка закончится, она начнёт играть заново
+    track.play()  # Запуск музыки
 
     def __init__(self, **kwargs):
         super(MainMenu, self).__init__(**kwargs)
@@ -96,19 +96,18 @@ class MainMenu(BoxLayout):
 
         # Добавление фона
         with self.canvas:
-            self.rect = Rectangle(source=f'background_image1.jpg', size=(1920, 1080))
+            self.rect = Rectangle(source='background_image1.jpg', size=Window.size)
 
         # "Кнопка" для красивой надписи, мол сделано нами
-        self.info_text = Button(text='created by 306Team',
-                                background_color=(0, 0, 0, 0),
-                                color=(0, 0, 0, 1),
-                                font_name="397-font.otf",
-                                font_size="14sp")
+        info_text = Button(text='created by 306Team',
+                           background_color=(0, 0, 0, 0),
+                           color=(0, 0, 0, 1),
+                           font_name="397-font.otf",
+                           font_size="14sp")
         # Настройка окружения для красивых кнопок
         self.orientation = 'vertical'
-        self.size_hint = (None, None)
-        self.size = (500, 700)
-        self.pos = (710, 30)
+        self.size_hint = (0.25, 0.6)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.4}
         self.spacing = 15
 
         # Создание кнопок
@@ -137,7 +136,7 @@ class MainMenu(BoxLayout):
                                   background_down='',
                                   on_press=self.btn_pressed)
         # Пустая кнопка, чтобы сделать отступ для text_info
-        self.empty_button = Button(background_color=(0, 0, 0, 0))
+        empty_button = Button(background_color=(0, 0, 0, 0))
 
         # Здесь мы привязываем нажатия кнопок к функциям
         self.play_button.bind(on_press=self.start_game)
@@ -148,8 +147,8 @@ class MainMenu(BoxLayout):
         self.add_widget(self.play_button)
         self.add_widget(self.settings_button)
         self.add_widget(self.exit_button)
-        self.add_widget(self.empty_button)
-        self.add_widget(self.info_text)
+        self.add_widget(empty_button)
+        self.add_widget(info_text)
 
     # Функция, привязанная к кнопке "Играть"
     def start_game(self, instance):
@@ -157,15 +156,22 @@ class MainMenu(BoxLayout):
         self.clear_widgets()
 
         # Установка новых параметров, чтобы были красивые кнопки
-        self.size = (500, 800)
-        self.pos = (710, 150)
+        self.size_hint = (0.25, 0.7)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
         # Текстовое поле для введения имени файла изображения
-        self.file_name_input = TextInput(hint_text='Введите имя файла изображения',  # Изначальный текст
-                                         background_color=(1 / 2, 1 / 2, 1 / 2, 1),  # Цвет фона поля
-                                         font_name="397-font.otf",  # Название шрифта
-                                         font_size="14sp",  # Размер текста
-                                         hint_text_color=(1, 1, 1, 1))  # Цвет текста
+        # self.file_name_input = TextInput(hint_text='Введите имя файла изображения',  # Изначальный текст
+        #                                  background_color=(1 / 2, 1 / 2, 1 / 2, 1),  # Цвет фона поля
+        #                                  font_name="397-font.otf",  # Название шрифта
+        #                                  font_size="14sp",  # Размер текста
+        #                                  hint_text_color=(1, 1, 1, 1))  # Цвет текста
+        self.file_name = Button(text='Выбрать файл',
+                                background_color=(0, 220 / 255, 20 / 255, 1),
+                                color=(1, 1, 1, 1),
+                                font_name="397-font.otf",
+                                font_size="32sp",
+                                background_normal='',
+                                background_down='')
         # "Кнопка", в которую передаётся значение количества строк
         self.rows_input = Button(text='Количество строк: 5',
                                  background_color=(0, 1 / 4, 1, 1),
@@ -221,11 +227,13 @@ class MainMenu(BoxLayout):
                              on_press=self.btn_pressed)
 
         # Здесь мы привязываем нажатия кнопок к функциям
+        self.file_name.bind(on_press=self.select_image)
         start_button.bind(on_press=self.launch_game)
         exit_button.bind(on_press=self.open_menu)
 
         # Здесь добавляется всё, что было описано выше
-        self.add_widget(self.file_name_input)
+        self.add_widget(self.file_name)
+        # self.add_widget(self.file_name_input)
         self.add_widget(self.rows_input)
         self.add_widget(self.slider_rows)
         self.add_widget(self.cols_input)
@@ -242,6 +250,34 @@ class MainMenu(BoxLayout):
     def update_value_col(self, instance, value):
         label = instance.parent.children[3]  # Получаем Label
         label.text = f'Количество столбцов: {int(value)}'
+
+    def select_image(self, instance):
+        self.clear_widgets()
+        # self.size_hint = (0.5, 0.3)
+        # self.pos_hint = {'center_x': 0.5, 'center_y': 0.4}
+        self.filechooser = FileChooserIconView(filters=["*.txt"],
+                                               size_hint=(2, 0.4),
+                                               pos_hint={'center_x': 0.5, 'center_y': 0.4},
+                                               font_name='397-font.otf')
+        exit_button = Button(text='Назад',
+                             size_hint=(1, 0.06),
+                             pos_hint={'center_x': 0.5, 'center_y': 0.1},
+                             background_color=(1, 1 / 2, 0, 1),
+                             color=(1, 1, 1, 1),
+                             font_name="397-font.otf",
+                             font_size="36sp",
+                             background_normal='',
+                             background_down='',
+                             on_press=self.btn_pressed)
+
+        self.filechooser.bind(on_selection=self.on_file_selected)
+        exit_button.bind(on_press=self.start_game)
+
+        self.add_widget(self.filechooser)
+        self.add_widget(exit_button)
+
+    def on_file_selected(self, selection):
+        print("AAAAAAAAAAAA")
 
     # Функция, привязанная к кнопке "Начать игру"
     def launch_game(self, instance):
@@ -264,8 +300,8 @@ class MainMenu(BoxLayout):
         self.clear_widgets()
 
         # Установка новых параметров, чтобы были красивые кнопки
-        self.size = (500, 500)
-        self.pos = (710, 315)
+        self.size_hint = (0.25, 0.45)
+        self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
         # Кнопка включения/выключения звуков
         self.sound_button = Button(text='Звуки: вкл',
