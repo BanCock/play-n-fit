@@ -5,9 +5,12 @@ from kivy.uix.slider import Slider
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
 from kivy.core.window import Window
+from kivy.uix.image import Image
 from kivy.core.audio import SoundLoader
 from kivy.uix.filechooser import FileChooserIconView
 from random import random
+
+import cv2
 
 # Глобальная переменная для включения/выключения звуков
 # (пока что только для звуков кнопок, может быть потом реализуем звуки нажатия на прямоугольники в картинке)
@@ -36,6 +39,20 @@ class InteractiveImage(Widget):
 
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
         # так как в качестве размера берём размер окна, а не самой картинки
+        self.img = cv2.imread(self.image_path)
+        self.ksize = (300, 300)
+        self.img = cv2.resize(self.img, Window.size)
+        #   cv2.imwrite("resized.jpg", self.img)
+        self.img = cv2.blur(self.img, self.ksize, cv2.BORDER_DEFAULT)
+
+        h, w, _ = self.img.shape
+        h = h // self.rows
+        w = w // self.cols
+        for i in range(self.cols):
+            for j in range(self.rows):
+                piece = self.img[i * h:(i + 1) * h, j * w:(j + 1) * w]
+                cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
+
         with self.canvas:
             self.bg = Rectangle(source=self.image_path, pos=self.pos, size=Window.size)
             self.size = Window.size
@@ -43,11 +60,12 @@ class InteractiveImage(Widget):
     # Функция отрисовки прямоугольников
     def draw_rectangles(self):
         with self.canvas:
-            for row in range(self.rows):
-                for col in range(self.cols):
-                    Color(random(), random(), random(), 1)  # Прозрачный цвет для секций
+            for col in range(self.cols):
+                for row in range(self.rows):
+                    #Color(random(), random(), random(), 1)  # Прозрачный цвет для секций
                     rect = Rectangle(pos=((self.width / self.cols) * col, (self.height / self.rows) * row),
-                                     size=(self.width / self.cols, self.height / self.rows))
+                                     size=(self.width / self.cols, self.height / self.rows),
+                                     source=f'pieces/piece_{self.rows - row - 1}_{col}.jpg')
                     self.rectangles.append(rect)
             print(self.width, self.height)
 
@@ -55,20 +73,25 @@ class InteractiveImage(Widget):
     def on_touch_down(self, touch):
         super(InteractiveImage, self).on_touch_down(touch)
         # Проверка того, что нажатие внутри изображения
-        if self.collide_point(*touch.pos):
-            # Ширина столбца и высота строки считается как ширина и высота окна делить на их количество
-            col_width = self.width / self.cols
-            row_height = self.height / self.rows
-            # номер удаляемого прямоугольника вычисляется как координаты нажатия
-            # по х делить на ширину и по y делить на высоту
-            col = int(touch.x // col_width)
-            row = int(touch.y // row_height)
-            index = row * self.cols + col
-            # Удаляем этот прямоугольник
-            try:
-                self.canvas.remove(self.rectangles[index])
-            except:
-                print("already clear")
+
+        #if self.collide_point(*touch.pos):
+        print(touch.pos)
+        # Ширина столбца и высота строки считается как ширина и высота окна делить на их количество
+        col_width = Window.size[0] / self.cols
+        row_height = Window.size[1] / self.rows
+        print('col is ', col_width, ' row is ', row_height)
+        # номер удаляемого прямоугольника вычисляется как координаты нажатия
+        # по х делить на ширину и по y делить на высоту
+        col = int(touch.x // col_width)
+        row = int(touch.y // row_height)
+        print('index col is ', col, ' row is ', row)
+        index = col * self.cols + row
+        print('index is ', index)
+        # Удаляем этот прямоугольник
+        try:
+            self.canvas.remove(self.rectangles[index])
+        except:
+            print("already clear")
 
 
 # Главное меню игры
@@ -97,6 +120,7 @@ class MainMenu(BoxLayout):
         # Добавление фона
         with self.canvas:
             self.rect = Rectangle(source='background_image1.jpg', size=Window.size)
+            #print(self.rect.size, Window.size, self.size)
 
         # "Кнопка" для красивой надписи, мол сделано нами
         info_text = Button(text='created by 306Team',
@@ -251,12 +275,20 @@ class MainMenu(BoxLayout):
         label = instance.parent.children[3]  # Получаем Label
         label.text = f'Количество столбцов: {int(value)}'
 
+
+    def selected(self):
+        try:
+            self.my_image.source = self.filechooser.selection[0]
+        except:
+            print("aaa")
     def select_image(self, instance):
         self.clear_widgets()
         # self.size_hint = (0.5, 0.3)
         # self.pos_hint = {'center_x': 0.5, 'center_y': 0.4}
-        self.filechooser = FileChooserIconView(filters=["*.txt"],
-                                               size_hint=(2, 0.4),
+
+        return
+
+        self.filechooser = FileChooserIconView(size_hint=(2, 0.4),
                                                pos_hint={'center_x': 0.5, 'center_y': 0.4},
                                                font_name='397-font.otf')
         exit_button = Button(text='Назад',
@@ -270,7 +302,7 @@ class MainMenu(BoxLayout):
                              background_down='',
                              on_press=self.btn_pressed)
 
-        self.filechooser.bind(on_selection=self.on_file_selected)
+        self.filechooser.bind(on_selection=self.selected())
         exit_button.bind(on_press=self.start_game)
 
         self.add_widget(self.filechooser)
@@ -282,7 +314,7 @@ class MainMenu(BoxLayout):
     # Функция, привязанная к кнопке "Начать игру"
     def launch_game(self, instance):
         # Читаем из окошка имя файла
-        file_name = self.file_name_input.text
+        #file_name = self.file_name_input.text
 
         # Читаем значения строк и столбцов
         rows = int(self.slider_rows.value)
@@ -290,8 +322,11 @@ class MainMenu(BoxLayout):
 
         # Очищаем экран от всего
         self.clear_widgets()
+        #self.size_hint = (0.0, 0.0)
+        #self.pos_hint = {'center_x': 0.0, 'center_y': 0.0}
+        self.spacing = 0
         # И открываем нашу интерактивную картинку, передаём имя файла, столбцы и строки
-        self.add_widget(InteractiveImage(file_name, rows, cols))
+        self.add_widget(InteractiveImage('my.jpg', rows, cols))
 
     # Функция для отображения настроек
     def open_settings(self, instance):
@@ -390,4 +425,5 @@ class GameApp(App):
 
 if __name__ == '__main__':
     Window.fullscreen = 'auto'
+    print(Window.size)
     GameApp().run()
