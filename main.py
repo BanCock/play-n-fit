@@ -314,8 +314,8 @@ class MainMenu(BoxLayout):
         self.add_widget(self.filechooser)
         self.add_widget(exit_button)
 
-    def on_file_selected(self, selection):
-        print("AAAAAAAAAAAA")
+# ТАКЖЕ ДУМАЮ ЧТО МОЖНО РАСКИДАТЬ КАКИЕ-ТО ЧАСТИ ПО РАЗНЫМ ФАЙЛАМ
+# МОЖЕТ БЫТЬ ТАК БУДЕТ УДОБНО, ХЗ
 
     # Функция, привязанная к кнопке "Начать игру"
     def launch_game(self, instance):
