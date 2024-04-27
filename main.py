@@ -275,18 +275,19 @@ class MainMenu(BoxLayout):
         label = instance.parent.children[3]  # Получаем Label
         label.text = f'Количество столбцов: {int(value)}'
 
-
-    def selected(self):
+# ЗДЕСЬ ОБЯЗАТЕЛЬНЫ ЭТИ АРГУМЕНТЫ, SELF ЭТО ПОНЯТНО, OBJ ЭТО САМ FILECHOOSER, VAL ЭТО
+# МАССИВ С ВЫБРАННЫМИ ФАЙЛАМИ, ПОЭТОМУ БЕРЁМ VAL[0]
+    def selected(self, obj, val):
         try:
-            self.my_image.source = self.filechooser.selection[0]
+            self.my_image.source = val[0]
         except:
             print("aaa")
+
     def select_image(self, instance):
         self.clear_widgets()
         # self.size_hint = (0.5, 0.3)
         # self.pos_hint = {'center_x': 0.5, 'center_y': 0.4}
-
-        return
+# ЭТО ТЕСТОВЫЙ КОД, НУЖНО ВСЁ ВЫРОВНЯТЬ И СДЕЛАТЬ КРАСИВЫМ
 
         self.filechooser = FileChooserIconView(size_hint=(2, 0.4),
                                                pos_hint={'center_x': 0.5, 'center_y': 0.4},
@@ -302,9 +303,14 @@ class MainMenu(BoxLayout):
                              background_down='',
                              on_press=self.btn_pressed)
 
-        self.filechooser.bind(on_selection=self.selected())
+# ЭТА КАРТИНКА ОТОБРАЖАЕТ ТЕКУЩИЙ ВЫБОР, НУЖНО ВСЁ ПЕРЕДВИНУТЬ ЧТОБЫ ВЛЕЗАЛО НА ЭКРАН,
+# ВОЗМОЖНО ПРИДЁТСЯ РАЗМЕЩАТЬ НАПРИМЕР СПРАВА ПАПКИ А СЛЕВА КАРТИНКУ
+# ТАКЖЕ Я ДУМАЮ ЧТО НУЖНО ПЕРЕИМЕНОВАТЬ НЕКОТОРЫЕ ПЕРЕМЕННЫЕ ДЛЯ ЯСНОСТИ КОДА
+        self.my_image = Image()
+        self.filechooser.bind(selection=self.selected)
         exit_button.bind(on_press=self.start_game)
 
+        self.add_widget(self.my_image)
         self.add_widget(self.filechooser)
         self.add_widget(exit_button)
 
@@ -326,7 +332,7 @@ class MainMenu(BoxLayout):
         #self.pos_hint = {'center_x': 0.0, 'center_y': 0.0}
         self.spacing = 0
         # И открываем нашу интерактивную картинку, передаём имя файла, столбцы и строки
-        self.add_widget(InteractiveImage('my.jpg', rows, cols))
+        self.add_widget(InteractiveImage(self.my_image.source, rows, cols))
 
     # Функция для отображения настроек
     def open_settings(self, instance):
