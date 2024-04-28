@@ -40,7 +40,8 @@ class InteractiveImage(Widget):
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
         # так как в качестве размера берём размер окна, а не самой картинки
         self.img = cv2.imread(self.image_path)
-        self.ksize = (300, 300)
+        bl = 200
+        self.ksize = (bl, bl)
         self.img = cv2.resize(self.img, Window.size)
         #   cv2.imwrite("resized.jpg", self.img)
         self.img = cv2.blur(self.img, self.ksize, cv2.BORDER_DEFAULT)
