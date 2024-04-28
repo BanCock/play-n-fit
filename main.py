@@ -46,10 +46,10 @@ class InteractiveImage(Widget):
         self.img = cv2.blur(self.img, self.ksize, cv2.BORDER_DEFAULT)
 
         h, w, _ = self.img.shape
-        h = h // self.rows
-        w = w // self.cols
-        for i in range(self.cols):
-            for j in range(self.rows):
+        h = h // (self.rows)
+        w = w // (self.cols)
+        for j in range(self.cols):
+            for i in range(self.rows):
                 piece = self.img[i * h:(i + 1) * h, j * w:(j + 1) * w]
                 cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
 
@@ -85,7 +85,7 @@ class InteractiveImage(Widget):
         col = int(touch.x // col_width)
         row = int(touch.y // row_height)
         print('index col is ', col, ' row is ', row)
-        index = col * self.cols + row
+        index = col * self.rows + row
         print('index is ', index)
         # Удаляем этот прямоугольник
         try:
