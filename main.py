@@ -10,6 +10,8 @@ from kivy.core.audio import SoundLoader
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.popup import Popup
 import cv2
+import os
+import shutil
 
 # Глобальные переменные для громкости музыки и эффектов
 music = 0
@@ -43,19 +45,35 @@ class InteractiveImage(Widget):
     def init_image(self):
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
         # так как в качестве размера берём размер окна, а не самой картинки
-        self.img = cv2.imread(self.image_path)
+        file_name = os.path.basename(self.image_path)
+        shutil.copyfile(self.image_path, 'tmp/' + file_name)
+        shutil.move('tmp/' + file_name, 'tmp/image.jpg')
+
+        self.img = cv2.imread('tmp/image.jpg')
         bl = 200
         self.ksize = (bl, bl)
         self.img = cv2.resize(self.img, Window.size)
         #   cv2.imwrite("resized.jpg", self.img)
-        self.img = cv2.blur(self.img, self.ksize, cv2.BORDER_DEFAULT)
-
-        h, w, _ = self.img.shape
+        if blur_check == 1:
+            self.img = cv2.blur(self.img, self.ksize, cv2.BORDER_DEFAULT)
+        if grey_check == 1:
+            gray_image = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+            ret, self.img = cv2.threshold(gray_image, 127, 210, 10)
+        h = self.img.shape[0]
+        w = self.img.shape[1]
         h = h // self.rows
         w = w // self.cols
-        for j in range(self.cols):
-            for i in range(self.rows):
+        counter = 1
+        for i in range(self.rows):
+            for j in range(self.cols):
                 piece = self.img[i * h:(i + 1) * h, j * w:(j + 1) * w]
+                piece_heigth = piece.shape[0]
+                piece_weigth = piece.shape[1]
+                # Если выбран режим нумерации
+                if num_check == 1:
+                    cv2.putText(piece, f'{counter}', (int(piece_weigth / 2.3), int(piece_heigth / 1.8)), cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
+                    counter += 1
+                cv2.rectangle(piece, (1, 1), (piece_weigth - 1, piece_heigth - 1), (255, 255, 255), 2)
                 cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
 
         with self.canvas:
@@ -114,6 +132,7 @@ class MainMenu(BoxLayout):
         global sound
         sound.volume = effects / 100
         sound.play()
+
 
     # Функция главного меню
     def open_menu(self, instance):
