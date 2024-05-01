@@ -1,3 +1,5 @@
+import time
+
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
@@ -595,4 +597,5 @@ class GameApp(App):
 
 if __name__ == '__main__':
     Window.fullscreen = 'auto'
+    Window.maximize()
     GameApp().run()
