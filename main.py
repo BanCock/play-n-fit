@@ -54,7 +54,14 @@ class InteractiveImage(Widget):
         self.img = cv2.imread('tmp/image.jpg')
         bl = 200
         self.ksize = (bl, bl)
-        self.img = cv2.resize(self.img, Window.size)
+        print(self.img.shape[0], self.img.shape[1])
+        print(Window.size[0], Window.size[1])
+        k = min(Window.size[0] / self.img.shape[1], Window.size[1] / self.img.shape[0])
+
+        self.new_size = (int(self.img.shape[1] * k * 0.9), int(self.img.shape[0] * k * 0.8))
+        self.new_pos = ((Window.size[0] - self.new_size[0]) // 2, (Window.size[1] - self.new_size[1])*0.9)
+        self.img = cv2.resize(self.img, self.new_size)
+        print(self.img.shape[0], self.img.shape[1])
         #   cv2.imwrite("resized.jpg", self.img)
         if blur_check == 1:
             self.img = cv2.blur(self.img, self.ksize, cv2.BORDER_DEFAULT)
@@ -73,24 +80,29 @@ class InteractiveImage(Widget):
                 piece_weigth = piece.shape[1]
                 # Если выбран режим нумерации
                 if num_check == 1:
-                    cv2.putText(piece, f'{counter}', (int(piece_weigth / 2.3), int(piece_heigth / 1.8)), cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
+                    cv2.putText(piece, f'{counter}', (int(piece_weigth / 2.3), int(piece_heigth / 1.8)),
+                                cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
                     counter += 1
                 cv2.rectangle(piece, (1, 1), (piece_weigth - 1, piece_heigth - 1), (255, 255, 255), 2)
                 cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
-
+        new_size = self.new_size
         with self.canvas:
-            self.bg = Rectangle(source=self.image_path, pos=self.pos, size=Window.size)
-            self.size = Window.size
+            self.bg = Rectangle(source=self.image_path, pos=self.new_pos, size=new_size)
+            self.size = new_size
 
     # Функция отрисовки прямоугольников
     def draw_rectangles(self):
+        new_pos = self.new_pos
         with self.canvas:
+            print("pos")
+            print(self.pos)
             for col in range(self.cols):
                 for row in range(self.rows):
                     # Color(random(), random(), random(), 1)  # Прозрачный цвет для секций
-                    rect = Rectangle(pos=((self.width / self.cols) * col, (self.height / self.rows) * row),
-                                     size=(self.width / self.cols, self.height / self.rows),
-                                     source=f'pieces/piece_{self.rows - row - 1}_{col}.jpg')
+                    rect = Rectangle(
+                        pos=(new_pos[0] + (self.width / self.cols) * col, new_pos[1] + (self.height / self.rows) * row),
+                        size=(self.width / self.cols, self.height / self.rows),
+                        source=f'pieces/piece_{self.rows - row - 1}_{col}.jpg')
                     self.rectangles.append(rect)
 
     # Функция, привязанная к нажатию на экран
@@ -100,12 +112,15 @@ class InteractiveImage(Widget):
 
         # if self.collide_point(*touch.pos):
         # Ширина столбца и высота строки считается как ширина и высота окна делить на их количество
-        col_width = Window.size[0] / self.cols
-        row_height = Window.size[1] / self.rows
+        col_width = self.new_size[0] / self.cols
+        row_height = self.new_size[1] / self.rows
         # номер удаляемого прямоугольника вычисляется как координаты нажатия
         # по х делить на ширину и по y делить на высоту
-        col = int(touch.x // col_width)
-        row = int(touch.y // row_height)
+
+        col = int((touch.x - self.new_pos[0]) // col_width)
+        row = int((touch.y - self.new_pos[1]) // row_height)
+        if col < 0 or col >= self.cols or row < 0 or row >= self.rows:
+            return
         index = col * self.rows + row
         # Удаляем этот прямоугольник
         try:
@@ -117,9 +132,9 @@ class InteractiveImage(Widget):
 # Главное меню игры
 class MainMenu(BoxLayout):
     sound.volume = effects / 100  # Изначальная громкость эффектов
-    track.volume = music / 100    # Изначальная громкость музыки
-    track.loop = True             # Когда музыка закончится, она начнёт играть заново
-    track.play()                  # Запуск музыки
+    track.volume = music / 100  # Изначальная громкость музыки
+    track.loop = True  # Когда музыка закончится, она начнёт играть заново
+    track.play()  # Запуск музыки
 
     def __init__(self, **kwargs):
         super(MainMenu, self).__init__(**kwargs)
@@ -134,7 +149,6 @@ class MainMenu(BoxLayout):
         global sound
         sound.volume = effects / 100
         sound.play()
-
 
     # Функция главного меню
     def open_menu(self, instance):
@@ -164,7 +178,7 @@ class MainMenu(BoxLayout):
                              font_name="397-font.otf",  # Шрифт
                              font_size="40sp",  # Размер шрифта
                              background_normal='',  # Эти два параметра нужны для того, чтобы фон
-                             background_down='',    # не влиял на цвет кнопки
+                             background_down='',  # не влиял на цвет кнопки
                              on_press=self.btn_pressed)  # Вызов функции звука нажатия на кнопку
         settings_button = Button(text='Настройки',
                                  background_color=(0, 220 / 255, 20 / 255, 1),
@@ -226,7 +240,7 @@ class MainMenu(BoxLayout):
 
         self.my_image = Image(fit_mode="scale-down")  # Параметр нужен для того, чтобы изображение не растягивалось
         filechooser = FileChooserIconView(filters=["*.jpg", "*.png"],  # Фильтр файлов
-                                          font_name='397-font.otf')    # Шрифт
+                                          font_name='397-font.otf')  # Шрифт
         exit_button = Button(text='Назад',
                              background_color=(1, 1 / 2, 0, 1),
                              color=(1, 1, 1, 1),
