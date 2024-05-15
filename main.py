@@ -512,6 +512,19 @@ class MainMenu(BoxLayout):
         self.spacing = 0
         # И открываем нашу интерактивную картинку, передаём имя файла, столбцы и строки
         self.add_widget(InteractiveImage(self.my_image.source))
+        # РОДИОН РОДИОН РОДИОН СДЕЛАТЬ ДОДЕЛАТЬ ДОПИЛИТЬ
+        # ПОПРОБУЙ ЗАПУСТИТЬ, В НЕПОСРЕДСТВЕННО ИГРОВОМ ПРОЦЕССЕ ПОЯВИЛАСЬ КНОПКА НАЗАД
+        # ПО АНАЛОГИИ СДЕЛАЙ ВТОРУЮ И ЗАДИЗАЙНЬ КРАСИВО ПОЖАЛУЙСТА
+        exit_button = Button(text='Назад',
+                             background_color=(1, 1 / 2, 0, 1),
+                             color=(1, 1, 1, 1),
+                             font_name="397-font.otf",
+                             font_size="40sp",
+                             background_normal='',
+                             background_down='',
+                             on_press=self.btn_pressed)
+        exit_button.bind(on_press=self.open_menu)
+        self.add_widget(exit_button)
 
     # Функция для отображения настроек
     def open_settings(self, instance):
