@@ -16,7 +16,7 @@ import shutil
 
 # Глобальные переменные для громкости музыки и эффектов
 music = 0
-effects = 0
+effects = 100
 # Глобальные переменные для количества строк и столбцов
 rows = 5
 cols = 5
@@ -25,7 +25,7 @@ blur_check = 0
 grey_check = 0
 num_check = 0
 # В track передаётся саундтрек. Сделал его глобальным, чтобы музыка играла в любой части меню
-track = SoundLoader.load('soundtrack.mp3')
+# track = SoundLoader.load('soundtrack.mp3')
 sound = SoundLoader.load('click_sound.mp3')
 
 
@@ -134,9 +134,9 @@ class InteractiveImage(Widget):
 # Главное меню игры
 class MainMenu(BoxLayout):
     sound.volume = effects / 100  # Изначальная громкость эффектов
-    track.volume = music / 100  # Изначальная громкость музыки
-    track.loop = True  # Когда музыка закончится, она начнёт играть заново
-    track.play()  # Запуск музыки
+    # track.volume = music / 100  # Изначальная громкость музыки
+    # track.loop = True  # Когда музыка закончится, она начнёт играть заново
+    # track.play()  # Запуск музыки
 
     def __init__(self, **kwargs):
         super(MainMenu, self).__init__(**kwargs)
@@ -558,24 +558,24 @@ class MainMenu(BoxLayout):
 
         # "Кнопка", в которую передаётся значение количества строк
 
-        music_layout = BoxLayout(orientation='horizontal')
+        # music_layout = BoxLayout(orientation='horizontal')
         effects_layout = BoxLayout(orientation='horizontal')
 
-        music_button = Button(text=f'Музыка: {music}%',
-                              background_color=(0, 1 / 4, 1, 1),
-                              color=(1, 1, 1, 1),
-                              font_name="397-font.otf",
-                              font_size="26sp",
-                              background_normal='',
-                              background_down='')
+        # music_button = Button(text=f'Музыка: {music}%',
+        #                       background_color=(0, 1 / 4, 1, 1),
+        #                       color=(1, 1, 1, 1),
+        #                       font_name="397-font.otf",
+        #                       font_size="26sp",
+        #                       background_normal='',
+        #                       background_down='')
         # Ползунок для строк
-        slider_music = Slider(min=0, max=100, value=music,  # Минимальное, максимальное и текущее значения
-                              background_width="30sp",  # Ширина полоски
-                              value_track=True,  # Нужно для отслеживания ползунка
-                              value_track_color=[1, 1 / 2, 0, 1],  # Цвет закрашенной полоски
-                              cursor_size=(50, 40),  # Размер курсора ползунка
-                              cursor_image="cursor.png",  # Курсор есть картинка, здесь передаётся какая именно
-                              step=1)  # Шаг от 1 до 100 только по целым числам
+        # slider_music = Slider(min=0, max=100, value=music,  # Минимальное, максимальное и текущее значения
+        #                       background_width="30sp",  # Ширина полоски
+        #                       value_track=True,  # Нужно для отслеживания ползунка
+        #                       value_track_color=[1, 1 / 2, 0, 1],  # Цвет закрашенной полоски
+        #                       cursor_size=(50, 40),  # Размер курсора ползунка
+        #                       cursor_image="cursor.png",  # Курсор есть картинка, здесь передаётся какая именно
+        #                       step=1)  # Шаг от 1 до 100 только по целым числам
 
         effects_button = Button(text=f'Эффекты: {effects}%',
                                 background_color=(0, 1 / 4, 1, 1),
@@ -602,27 +602,27 @@ class MainMenu(BoxLayout):
                              on_press=self.btn_pressed)
 
         # Здесь мы привязываем нажатия кнопок/ползунков к функциям
-        slider_music.bind(value=self.update_value_music)
+        # slider_music.bind(value=self.update_value_music)
         slider_effects.bind(value=self.update_value_effects)
         exit_button.bind(on_press=self.open_menu)
 
         # Здесь добавляется всё, что было описано выше
-        music_layout.add_widget(music_button)
-        music_layout.add_widget(slider_music)
+        # music_layout.add_widget(music_button)
+        # music_layout.add_widget(slider_music)
         effects_layout.add_widget(effects_button)
         effects_layout.add_widget(slider_effects)
 
-        self.add_widget(music_layout)
+        # self.add_widget(music_layout)
         self.add_widget(effects_layout)
         self.add_widget(exit_button)
 
     # Функция для изменения значения громкости музыки
-    def update_value_music(self, instance, value):
-        global music
-        label = instance.parent.children[1]  # Получаем Label
-        music = int(value)
-        track.volume = music / 100
-        label.text = f'Музыка: {music}%'
+    # def update_value_music(self, instance, value):
+    #     global music
+    #     label = instance.parent.children[1]  # Получаем Label
+    #     music = int(value)
+    #     track.volume = music / 100
+    #     label.text = f'Музыка: {music}%'
 
     # Функция для изменения значения громкости эффектов
     def update_value_effects(self, instance, value):
