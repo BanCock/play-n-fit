@@ -39,10 +39,13 @@ class InteractiveImage(Widget):
         self.cols = cols
         self.image_path = image_path
         # Массив прямоугольников
-        self.rectangles = []
+        self.rectangles = [] * 100
         # Инициализация изображения и отрисовка прямоугольников
         self.init_image()
+        self.rectangles.clear()
+
         self.draw_rectangles()
+
 
     def init_image(self):
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
@@ -84,6 +87,8 @@ class InteractiveImage(Widget):
                                 cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
                     counter += 1
                 cv2.rectangle(piece, (1, 1), (piece_weigth - 1, piece_heigth - 1), (255, 255, 255), 2)
+                try: os.remove(f'pieces/piece_{i}_{j}.jpg', piece)
+                except: pass
                 cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
         new_size = self.new_size
         with self.canvas:
@@ -128,6 +133,10 @@ class InteractiveImage(Widget):
         except:
             pass
 
+    def __del__(self):
+        self.canvas.clear()
+        self.rectangles.clear()
+
 
 # Главное меню игры
 class MainMenu(BoxLayout):
@@ -139,6 +148,7 @@ class MainMenu(BoxLayout):
     def __init__(self, **kwargs):
         super(MainMenu, self).__init__(**kwargs)
         # my_image вынесена в __init__ для проверки пути файла во внешней функции
+        self.inter_img: InteractiveImage = None
         self.my_image = None
         # Вызов функции главного меню. Туда передаётся 0 по приколу, так как прога требует аргумент
         self.open_menu(0)
@@ -154,7 +164,8 @@ class MainMenu(BoxLayout):
     def open_menu(self, instance):
         # Очищаем окно от предыдущих кнопок и тд
         self.clear_widgets()
-
+        try: self.inter_img.canvas.clear()
+        except: pass
         # Добавление фона
         with self.canvas:
             rect = Rectangle(source='background_image1.jpg', size=Window.size)
@@ -234,7 +245,7 @@ class MainMenu(BoxLayout):
                           size_hint=(1.5, 0.5),
                           pos_hint={'center_x': 0.5, 'center_y': 0.8})
         hbox2 = BoxLayout(orientation="horizontal",
-                          size_hint=(1.5, 0.08),
+                          size_hint=(1.5, 0.09),
                           pos_hint={'center_x': 0.5, 'center_y': 0.1},
                           spacing=500)
 
@@ -273,6 +284,8 @@ class MainMenu(BoxLayout):
 
     # Функция для выбора строк/столбцов и афинных преобразований
     def select_rows_cols(self, instance):
+        try: self.inter_img.canvas.clear()
+        except: pass
         if self.my_image.source is None:
             # Если пользователь не выбрал файл, то вылезает окошко, которое не позволит пройти дальше
             # и попросит пользователя выбрать изображение
@@ -406,7 +419,7 @@ class MainMenu(BoxLayout):
             slider_cols.bind(value=self.update_value_col)
 
             hbox2 = BoxLayout(orientation="horizontal",
-                              size_hint=(1.5, 0.05),
+                              size_hint=(1.5, 0.06),
                               pos_hint={'center_x': 0.5, 'center_y': 0},
                               spacing=500)
             start_button = Button(text='Начать игру',
@@ -510,12 +523,15 @@ class MainMenu(BoxLayout):
         # Очищаем экран от всего
         self.clear_widgets()
         self.spacing = 0
+
         # И открываем нашу интерактивную картинку, передаём имя файла, столбцы и строки
-        self.add_widget(InteractiveImage(self.my_image.source))
-        # РОДИОН РОДИОН РОДИОН СДЕЛАТЬ ДОДЕЛАТЬ ДОПИЛИТЬ
-        # ПОПРОБУЙ ЗАПУСТИТЬ, В НЕПОСРЕДСТВЕННО ИГРОВОМ ПРОЦЕССЕ ПОЯВИЛАСЬ КНОПКА НАЗАД
-        # ПО АНАЛОГИИ СДЕЛАЙ ВТОРУЮ И ЗАДИЗАЙНЬ КРАСИВО ПОЖАЛУЙСТА
-        exit_button = Button(text='Назад',
+        self.inter_img = InteractiveImage(self.my_image.source)
+        self.add_widget(self.inter_img)
+        hbox = BoxLayout(orientation="horizontal",
+                         size_hint=(1.5, 0.15),
+                         pos_hint={'center_x': 0.5, 'center_y': 0.1},
+                         spacing=500)
+        back_button = Button(text='Назад',
                              background_color=(1, 1 / 2, 0, 1),
                              color=(1, 1, 1, 1),
                              font_name="397-font.otf",
@@ -523,8 +539,19 @@ class MainMenu(BoxLayout):
                              background_normal='',
                              background_down='',
                              on_press=self.btn_pressed)
-        exit_button.bind(on_press=self.open_menu)
-        self.add_widget(exit_button)
+        continue_button = Button(text='Завершить',
+                                 background_color=(0, 220 / 255, 20 / 255, 1),
+                                 color=(1, 1, 1, 1),
+                                 font_name="397-font.otf",
+                                 font_size="40sp",
+                                 background_normal='',
+                                 background_down='',
+                                 on_press=self.btn_pressed)
+        back_button.bind(on_press=self.select_rows_cols)
+        continue_button.bind(on_press=self.open_menu)
+        hbox.add_widget(back_button)
+        hbox.add_widget(continue_button)
+        self.add_widget(hbox)
 
     # Функция для отображения настроек
     def open_settings(self, instance):
