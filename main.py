@@ -1,6 +1,5 @@
-import time
-
 from kivy.app import App
+from kivy.cache import Cache
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.slider import Slider
@@ -42,10 +41,7 @@ class InteractiveImage(Widget):
         self.rectangles = [] * 100
         # Инициализация изображения и отрисовка прямоугольников
         self.init_image()
-        self.rectangles.clear()
-
         self.draw_rectangles()
-
 
     def init_image(self):
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
@@ -87,7 +83,7 @@ class InteractiveImage(Widget):
                                 cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
                     counter += 1
                 cv2.rectangle(piece, (1, 1), (piece_weigth - 1, piece_heigth - 1), (255, 255, 255), 2)
-                try: os.remove(f'pieces/piece_{i}_{j}.jpg', piece)
+                try: os.remove(f'pieces/piece_{i}_{j}.jpg')
                 except: pass
                 cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
         new_size = self.new_size
@@ -98,16 +94,17 @@ class InteractiveImage(Widget):
     # Функция отрисовки прямоугольников
     def draw_rectangles(self):
         new_pos = self.new_pos
+        Cache.remove('kv.image')
+        Cache.remove('kv.texture')
         with self.canvas:
-            print("pos")
-            print(self.pos)
             for col in range(self.cols):
                 for row in range(self.rows):
                     # Color(random(), random(), random(), 1)  # Прозрачный цвет для секций
                     rect = Rectangle(
                         pos=(new_pos[0] + (self.width / self.cols) * col, new_pos[1] + (self.height / self.rows) * row),
                         size=(self.width / self.cols, self.height / self.rows),
-                        source=f'pieces/piece_{self.rows - row - 1}_{col}.jpg')
+                        source=f'pieces/piece_{self.rows - row - 1}_{col}.jpg'
+                        )
                     self.rectangles.append(rect)
 
     # Функция, привязанная к нажатию на экран
@@ -132,10 +129,6 @@ class InteractiveImage(Widget):
             self.canvas.remove(self.rectangles[index])
         except:
             pass
-
-    def __del__(self):
-        self.canvas.clear()
-        self.rectangles.clear()
 
 
 # Главное меню игры
@@ -163,9 +156,9 @@ class MainMenu(BoxLayout):
     # Функция главного меню
     def open_menu(self, instance):
         # Очищаем окно от предыдущих кнопок и тд
+
         self.clear_widgets()
-        try: self.inter_img.canvas.clear()
-        except: pass
+
         # Добавление фона
         with self.canvas:
             rect = Rectangle(source='background_image1.jpg', size=Window.size)
@@ -282,10 +275,10 @@ class MainMenu(BoxLayout):
         self.add_widget(hbox1)
         self.add_widget(hbox2)
 
-    # Функция для выбора строк/столбцов и афинных преобразований
+    # Функция для выбора строк/столбцов и аффинных преобразований
     def select_rows_cols(self, instance):
-        try: self.inter_img.canvas.clear()
-        except: pass
+
+
         if self.my_image.source is None:
             # Если пользователь не выбрал файл, то вылезает окошко, которое не позволит пройти дальше
             # и попросит пользователя выбрать изображение
