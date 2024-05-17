@@ -38,17 +38,16 @@ class InteractiveImage(Widget):
         self.cols = cols
         self.image_path = image_path
         # Массив прямоугольников
-        self.rectangles = [] * 100
+        self.rectangles = []
         # Инициализация изображения и отрисовка прямоугольников
         self.init_image()
         self.draw_rectangles()
+        os.replace('tmp/image.jpg', image_path)
 
     def init_image(self):
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
         # так как в качестве размера берём размер окна, а не самой картинки
-        file_name = os.path.basename(self.image_path)
-        shutil.copyfile(self.image_path, 'tmp/' + file_name)
-        shutil.move('tmp/' + file_name, 'tmp/image.jpg')
+        os.replace(self.image_path,'tmp/image.jpg')
 
         self.img = cv2.imread('tmp/image.jpg')
         bl = 200
@@ -83,12 +82,10 @@ class InteractiveImage(Widget):
                                 cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
                     counter += 1
                 cv2.rectangle(piece, (1, 1), (piece_weigth - 1, piece_heigth - 1), (255, 255, 255), 2)
-                try: os.remove(f'pieces/piece_{i}_{j}.jpg')
-                except: pass
                 cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
         new_size = self.new_size
         with self.canvas:
-            self.bg = Rectangle(source=self.image_path, pos=self.new_pos, size=new_size)
+            self.bg = Rectangle(source='tmp/image.jpg', pos=self.new_pos, size=new_size)
             self.size = new_size
 
     # Функция отрисовки прямоугольников
@@ -553,7 +550,7 @@ class MainMenu(BoxLayout):
         self.orientation = 'vertical'
 
         # Установка новых параметров, чтобы были красивые кнопки
-        self.size_hint = (0.35, 0.4)
+        self.size_hint = (0.35, 0.25)
         self.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
         # "Кнопка", в которую передаётся значение количества строк
