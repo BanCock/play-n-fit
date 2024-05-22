@@ -1,3 +1,10 @@
+import os
+os.environ["KIVY_NO_ARGS"] = "1"
+os.environ['KIVY_IMAGE'] = "pil,sdl2"
+os.environ['PATH'] += ';' + os.path.expandvars('%AppData%\\Python\\share\\glew\\bin')
+os.environ['PATH'] += ';' + os.path.expandvars('%AppData%\\Python\\share\\sdl2\\bin')
+
+import logging
 from kivy.app import App
 from kivy.cache import Cache
 from kivy.uix.button import Button
@@ -10,9 +17,26 @@ from kivy.uix.image import Image
 from kivy.core.audio import SoundLoader
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.popup import Popup
+import numpy as np
 import cv2
-import os
 import shutil
+
+logging.basicConfig(level=logging.INFO, filename="kyiv_log.log",filemode="w", force=True)
+
+logging.info("Create dirs")
+try:
+    os.mkdir(os.path.join(os.getcwd(), "pieces"))
+    os.mkdir(os.path.join(os.getcwd(), "tmp"))
+except: logging.warning("dirs already exist")
+
+filechooser_path = os.path.expanduser("~") # заменить на os.path.expanduser("~")
+pieces_path = os.path.join(os.getcwd(), "pieces")
+tmp_path = os.path.join(os.getcwd(), "tmp", "image.jpg")
+cursor_png = os.path.join(os.getcwd(), "cursor.png")
+
+font_file = os.path.join(os.getcwd(), "397-font.otf")
+
+sound = SoundLoader.load(os.path.join(os.getcwd(), "click_sound.mp3"))
 
 # Глобальные переменные для громкости музыки и эффектов
 music = 0
@@ -26,13 +50,14 @@ grey_check = 0
 num_check = 0
 # В track передаётся саундтрек. Сделал его глобальным, чтобы музыка играла в любой части меню
 # track = SoundLoader.load('soundtrack.mp3')
-sound = SoundLoader.load('click_sound.mp3')
+
 
 
 # Класс интерактивной картинки
 class InteractiveImage(Widget):
     def __init__(self, image_path, **kwargs):
         super(InteractiveImage, self).__init__(**kwargs)
+        logging.info("START Initialize InteractiveImage")
         # Количество строк и столбцов, путь к картинке
         self.rows = rows
         self.cols = cols
@@ -42,18 +67,26 @@ class InteractiveImage(Widget):
         # Инициализация изображения и отрисовка прямоугольников
         self.init_image()
         self.draw_rectangles()
-        os.replace('tmp/image.jpg', image_path)
+        #logging.info("replace back {0} ---> {1}".format(tmp_path, self.image_path))
+        #os.replace(tmp_path, image_path)
+        logging.info("END OF Initialize InteractiveImage")
 
     def init_image(self):
         # Здесь рисуем холст, его фоном становится наша картинка, изменения размеров окна не приветствуется
         # так как в качестве размера берём размер окна, а не самой картинки
-        os.replace(self.image_path,'tmp/image.jpg')
+        logging.info("copy {0} ---> {1}".format(self.image_path, tmp_path))
 
-        self.img = cv2.imread('tmp/image.jpg')
+        try: shutil.copy(self.image_path, tmp_path)
+        except: logging.error("can't replace the file")
+
+        logging.info("cv2 reading image at {0}".format(tmp_path))
+
+        try:self.img = cv2.imdecode(np.fromfile(tmp_path, dtype=np.uint8), cv2.IMREAD_COLOR)
+        except:
+            logging.error("Can't open file, may be there is cyrillic symbols")
+            return
         bl = 200
         self.ksize = (bl, bl)
-        print(self.img.shape[0], self.img.shape[1])
-        print(Window.size[0], Window.size[1])
         k = min(Window.size[0] / self.img.shape[1], Window.size[1] / self.img.shape[0])
 
         self.new_size = (int(self.img.shape[1] * k * 0.9), int(self.img.shape[0] * k * 0.8))
@@ -71,6 +104,9 @@ class InteractiveImage(Widget):
         h = h // self.rows
         w = w // self.cols
         counter = 1
+        logging.info("START cutting image")
+        logging.info("pieces saved in {0}".format(pieces_path))
+
         for i in range(self.rows):
             for j in range(self.cols):
                 piece = self.img[i * h:(i + 1) * h, j * w:(j + 1) * w]
@@ -82,28 +118,40 @@ class InteractiveImage(Widget):
                                 cv2.FONT_HERSHEY_TRIPLEX, 2, (255, 255, 255), 2)
                     counter += 1
                 cv2.rectangle(piece, (1, 1), (piece_weigth - 1, piece_heigth - 1), (255, 255, 255), 2)
-                cv2.imwrite(f'pieces/piece_{i}_{j}.jpg', piece)
-        new_size = self.new_size
+
+                #logging.info(f'cv2 writing {os.path.join(pieces_path, f"piece_{i}_{j}.jpg")}')
+                try : cv2.imencode('.jpg', piece)[1].tofile(os.path.join(pieces_path, f"piece_{i}_{j}.jpg"))
+                #try: cv2.imwrite(os.path.join(pieces_path, f"piece_{i}_{j}.jpg"), piece)
+                except: logging.error("can't save piece at {0}".format(os.path.join(pieces_path, f"piece_{i}_{j}.jpg")))
+        logging.info("END cutting image")
+        logging.info("set up background from " + tmp_path)
+
         with self.canvas:
-            self.bg = Rectangle(source='tmp/image.jpg', pos=self.new_pos, size=new_size)
-            self.size = new_size
+            self.bg = Rectangle(source=tmp_path, pos=self.new_pos, size=self.new_size)
+            self.size = self.new_size
 
     # Функция отрисовки прямоугольников
     def draw_rectangles(self):
         new_pos = self.new_pos
         Cache.remove('kv.image')
         Cache.remove('kv.texture')
+        logging.info("START drawing pieces")
+        logging.info("pieces from {0}".format(pieces_path))
+
         with self.canvas:
             for col in range(self.cols):
                 for row in range(self.rows):
                     # Color(random(), random(), random(), 1)  # Прозрачный цвет для секций
-                    rect = Rectangle(
-                        pos=(new_pos[0] + (self.width / self.cols) * col, new_pos[1] + (self.height / self.rows) * row),
-                        size=(self.width / self.cols, self.height / self.rows),
-                        source=f'pieces/piece_{self.rows - row - 1}_{col}.jpg'
-                        )
+                    try:
+                        rect = Rectangle(
+                            pos=(new_pos[0] + (self.width / self.cols) * col, new_pos[1] + (self.height / self.rows) * row),
+                            size=(self.width / self.cols, self.height / self.rows),
+                            source=os.path.join(pieces_path, f"piece_{self.rows - row - 1}_{col}.jpg")
+                            )
+                    except: logging.error("can't get piece from {0}".format(os.path.join(pieces_path, f"piece_{self.rows - row - 1}_{col}.jpg")))
                     self.rectangles.append(rect)
 
+        logging.info("END drawing pieces")
     # Функция, привязанная к нажатию на экран
     def on_touch_down(self, touch):
         super(InteractiveImage, self).on_touch_down(touch)
@@ -158,13 +206,13 @@ class MainMenu(BoxLayout):
 
         # Добавление фона
         with self.canvas:
-            rect = Rectangle(source='background_image1.jpg', size=Window.size)
+            rect = Rectangle(source='./background_image1.jpg', size=Window.size)
 
         # "Кнопка" для красивой надписи, мол сделано нами
         info_text = Button(text='created by 306Team',
                            background_color=(0, 0, 0, 0),
                            color=(0, 0, 0, 1),
-                           font_name="397-font.otf",
+                           font_name=font_file,
                            font_size="14sp")
         # Настройка окружения для красивых кнопок
         self.orientation = 'vertical'
@@ -176,7 +224,7 @@ class MainMenu(BoxLayout):
         play_button = Button(text='Играть',
                              background_color=(0, 220 / 255, 20 / 255, 1),  # Цвет фона кнопки
                              color=(1, 1, 1, 1),  # Цвет текста на кнопке
-                             font_name="397-font.otf",  # Шрифт
+                             font_name=font_file,  # Шрифт
                              font_size="40sp",  # Размер шрифта
                              background_normal='',  # Эти два параметра нужны для того, чтобы фон
                              background_down='',  # не влиял на цвет кнопки
@@ -184,7 +232,7 @@ class MainMenu(BoxLayout):
         settings_button = Button(text='Настройки',
                                  background_color=(0, 220 / 255, 20 / 255, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="40sp",
                                  background_normal='',
                                  background_down='',
@@ -192,7 +240,7 @@ class MainMenu(BoxLayout):
         exit_button = Button(text='Выход',
                              background_color=(1, 40 / 255, 50 / 255, 1),
                              color=(1, 1, 1, 1),
-                             font_name="397-font.otf",
+                             font_name=font_file,
                              font_size="40sp",
                              background_normal='',
                              background_down='',
@@ -225,7 +273,7 @@ class MainMenu(BoxLayout):
         info_text = Button(text='Выберите изображение',
                            background_color=(0, 0, 0, 0),
                            color=(0, 0, 1 / 2, 1),
-                           font_name="397-font.otf",
+                           font_name=font_file,
                            font_size="40sp",
                            size_hint=(1, 0.05))
         # BoxLayout - это структура, которая может в себе содержать несколько кнопок/изображений/ползунков и тд.
@@ -240,12 +288,13 @@ class MainMenu(BoxLayout):
                           spacing=500)
 
         self.my_image = Image(fit_mode="scale-down")  # Параметр нужен для того, чтобы изображение не растягивалось
-        filechooser = FileChooserIconView(filters=["*.jpg", "*.png"],  # Фильтр файлов
-                                          font_name='397-font.otf')  # Шрифт
+        filechooser = FileChooserIconView(font_name=font_file,      # Шрифт
+                                          path=filechooser_path,
+                                          filters=['*.bmp', '*.jpg', '*.jpeg', '*.png', '*.dib', '*.rle', '*..ico'])
         exit_button = Button(text='Назад',
                              background_color=(1, 1 / 2, 0, 1),
                              color=(1, 1, 1, 1),
-                             font_name="397-font.otf",
+                             font_name=font_file,
                              font_size="40sp",
                              background_normal='',
                              background_down='',
@@ -253,7 +302,7 @@ class MainMenu(BoxLayout):
         continue_button = Button(text='Продолжить',
                                  background_color=(0, 220 / 255, 20 / 255, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="40sp",
                                  background_normal='',
                                  background_down='',
@@ -282,7 +331,7 @@ class MainMenu(BoxLayout):
             exit_button = Button(text='Понятно',
                                  background_color=(0, 220 / 255, 20 / 255, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="40sp",
                                  background_normal='',
                                  background_down='',
@@ -291,7 +340,7 @@ class MainMenu(BoxLayout):
                           content=exit_button,
                           title='Ошибка! Выберите изображение',
                           title_color=(1, 1, 1, 1),
-                          title_font='397-font.otf',
+                          title_font=font_file,
                           title_size='28sp',
                           separator_color=(0, 0, 0, 0))
             popup.open()
@@ -308,7 +357,7 @@ class MainMenu(BoxLayout):
             info_text = Button(text='Выберите параметры',
                                background_color=(0, 0, 0, 0),
                                color=(0, 0, 1 / 2, 1),
-                               font_name="397-font.otf",
+                               font_name=font_file,
                                font_size="40sp",
                                size_hint=(1, 0.1),
                                pos_hint={'center_x': 0.5, 'center_y': 1.7})
@@ -320,7 +369,7 @@ class MainMenu(BoxLayout):
             blur_button = Button(text='Размытие: выкл.',
                                  background_color=(1, 20 / 255, 20 / 255, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="28sp",
                                  background_normal='',
                                  background_down='',
@@ -329,7 +378,7 @@ class MainMenu(BoxLayout):
             grey_button = Button(text='Монохром: выкл.',
                                  background_color=(1, 20 / 255, 20 / 255, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="28sp",
                                  background_normal='',
                                  background_down='',
@@ -338,7 +387,7 @@ class MainMenu(BoxLayout):
             numbering_button = Button(text='Нумерация: выкл.',
                                       background_color=(1, 20 / 255, 20 / 255, 1),
                                       color=(1, 1, 1, 1),
-                                      font_name="397-font.otf",
+                                      font_name=font_file,
                                       font_size="28sp",
                                       background_normal='',
                                       background_down='',
@@ -373,7 +422,7 @@ class MainMenu(BoxLayout):
             rows_input = Button(text=f'Строки: {rows}',
                                 background_color=(0, 1 / 4, 1, 1),
                                 color=(1, 1, 1, 1),
-                                font_name="397-font.otf",
+                                font_name=font_file,
                                 font_size="28sp",
                                 background_normal='',
                                 background_down='')
@@ -383,7 +432,7 @@ class MainMenu(BoxLayout):
                                  value_track=True,  # Нужно для отслеживания ползунка
                                  value_track_color=[1, 1 / 2, 0, 1],  # Цвет закрашенной полоски
                                  cursor_size=(50, 40),  # Размер курсора ползунка
-                                 cursor_image="cursor.png",  # Курсор есть картинка, здесь передаётся какая именно
+                                 cursor_image=cursor_png,  # Курсор есть картинка, здесь передаётся какая именно
                                  step=1)  # Шаг от 1 до 10 только по целым числам
             slider_rows.bind(value=self.update_value_row)
 
@@ -394,7 +443,7 @@ class MainMenu(BoxLayout):
             cols_input = Button(text=f'Столбцы: {cols}',
                                 background_color=(0, 1 / 4, 1, 1),
                                 color=(1, 1, 1, 1),
-                                font_name="397-font.otf",
+                                font_name=font_file,
                                 font_size="28sp",
                                 background_normal='',
                                 background_down='')
@@ -404,7 +453,7 @@ class MainMenu(BoxLayout):
                                  value_track=True,
                                  value_track_color=[1, 1 / 2, 0, 1],
                                  cursor_size=(50, 40),
-                                 cursor_image="cursor.png",
+                                 cursor_image=cursor_png,
                                  step=1)
             slider_cols.bind(value=self.update_value_col)
 
@@ -415,7 +464,7 @@ class MainMenu(BoxLayout):
             start_button = Button(text='Начать игру',
                                   background_color=(0, 220 / 255, 20 / 255, 1),
                                   color=(1, 1, 1, 1),
-                                  font_name="397-font.otf",
+                                  font_name=font_file,
                                   font_size="40sp",
                                   background_normal='',
                                   background_down='',
@@ -423,7 +472,7 @@ class MainMenu(BoxLayout):
             exit_button = Button(text='Назад',
                                  background_color=(1, 1 / 2, 0, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="40sp",
                                  background_normal='',
                                  background_down='',
@@ -524,7 +573,7 @@ class MainMenu(BoxLayout):
         back_button = Button(text='Назад',
                              background_color=(1, 1 / 2, 0, 1),
                              color=(1, 1, 1, 1),
-                             font_name="397-font.otf",
+                             font_name=font_file,
                              font_size="40sp",
                              background_normal='',
                              background_down='',
@@ -532,7 +581,7 @@ class MainMenu(BoxLayout):
         continue_button = Button(text='Завершить',
                                  background_color=(0, 220 / 255, 20 / 255, 1),
                                  color=(1, 1, 1, 1),
-                                 font_name="397-font.otf",
+                                 font_name=font_file,
                                  font_size="40sp",
                                  background_normal='',
                                  background_down='',
@@ -561,7 +610,7 @@ class MainMenu(BoxLayout):
         # music_button = Button(text=f'Музыка: {music}%',
         #                       background_color=(0, 1 / 4, 1, 1),
         #                       color=(1, 1, 1, 1),
-        #                       font_name="397-font.otf",
+        #                       font_name=font_file,
         #                       font_size="26sp",
         #                       background_normal='',
         #                       background_down='')
@@ -571,13 +620,13 @@ class MainMenu(BoxLayout):
         #                       value_track=True,  # Нужно для отслеживания ползунка
         #                       value_track_color=[1, 1 / 2, 0, 1],  # Цвет закрашенной полоски
         #                       cursor_size=(50, 40),  # Размер курсора ползунка
-        #                       cursor_image="cursor.png",  # Курсор есть картинка, здесь передаётся какая именно
+        #                       cursor_image=cursor_png,  # Курсор есть картинка, здесь передаётся какая именно
         #                       step=1)  # Шаг от 1 до 100 только по целым числам
 
         effects_button = Button(text=f'Эффекты: {effects}%',
                                 background_color=(0, 1 / 4, 1, 1),
                                 color=(1, 1, 1, 1),
-                                font_name="397-font.otf",
+                                font_name=font_file,
                                 font_size="26sp",
                                 background_normal='',
                                 background_down='')
@@ -586,13 +635,13 @@ class MainMenu(BoxLayout):
                                 value_track=True,
                                 value_track_color=[1, 1 / 2, 0, 1],
                                 cursor_size=(50, 40),
-                                cursor_image="cursor.png",
+                                cursor_image=cursor_png,
                                 step=1)
         # Кнопка "Назад"
         exit_button = Button(text='Назад',
                              background_color=(1, 1 / 2, 0, 1),
                              color=(1, 1, 1, 1),
-                             font_name="397-font.otf",
+                             font_name=font_file,
                              font_size="40sp",
                              background_normal='',
                              background_down='',
